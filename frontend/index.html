@@ -5,93 +5,132 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Foxwar Bridge</title>
   <style>
-    :root {
-      --bg:       #0f1117;
-      --surface:  #1a1d2e;
-      --border:   #2a2d42;
-      --accent:   #e05a2b;
-      --accent2:  #3b82f6;
-      --text:     #e2e4f0;
-      --muted:    #6b7280;
-      --ok:       #22c55e;
-      --warn:     #f59e0b;
-      --err:      #ef4444;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* ── Tailwind design tokens (neutral + amber, Inter) ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      font-size: 14px;
-      background: var(--bg);
-      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      background: #0a0a0a;
+      color: #f5f5f5;
       min-height: 100vh;
-      padding: 16px;
+      padding: 12px;
       user-select: none;
     }
+
     /* ── Header ── */
     header {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding-bottom: 14px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 16px;
+      gap: 8px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #262626;
+      margin-bottom: 12px;
     }
-    header svg { flex-shrink: 0; }
-    header h1 { font-size: 17px; font-weight: 600; }
-    header .version { margin-left: auto; color: var(--muted); font-size: 12px; }
+    .brand-name {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+    .brand-foxwar {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: #f59e0b;
+    }
+    .brand-bridge {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #525252;
+      margin-top: 1px;
+    }
+    .version-badge {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #525252;
+      background: #171717;
+      border: 1px solid #262626;
+      padding: 2px 8px;
+    }
+
     /* ── Cards ── */
     .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px;
-      margin-bottom: 12px;
+      background: #171717;
+      border: 1px solid #262626;
+      padding: 12px;
+      margin-bottom: 10px;
     }
-    .card h2 {
-      font-size: 11px;
+    .card-title {
+      font-size: 10px;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: .08em;
-      color: var(--muted);
-      margin-bottom: 12px;
+      letter-spacing: 0.1em;
+      color: #525252;
+      margin-bottom: 10px;
     }
-    /* ── Status row ── */
+
+    /* ── Status rows ── */
     .stat-row {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 5px 0;
+      padding: 4px 0;
+      border-bottom: 1px solid #1a1a1a;
     }
+    .stat-row:last-of-type { border-bottom: none; }
+
     .dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
+      width: 6px;
+      height: 6px;
       flex-shrink: 0;
     }
-    .dot.ok   { background: var(--ok);   box-shadow: 0 0 6px var(--ok); }
-    .dot.warn { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
-    .dot.off  { background: var(--muted); }
-    .stat-label { color: var(--muted); min-width: 130px; }
-    .stat-value { font-weight: 500; }
-    /* ── Form ── */
+    .dot.ok   { background: #10b981; box-shadow: 0 0 5px #10b981; }
+    .dot.warn { background: #f59e0b; box-shadow: 0 0 5px #f59e0b; }
+    .dot.off  { background: #404040; }
+
+    .stat-label { color: #737373; min-width: 140px; font-size: 12px; }
+    .stat-value { color: #e5e5e5; font-size: 12px; }
+    .stat-value.mono { font-family: 'Consolas', 'Cascadia Mono', monospace; font-size: 11px; }
+
+    /* ── Form rows ── */
     .form-row {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .form-row:last-child { margin-bottom: 0; }
-    label { color: var(--muted); min-width: 130px; flex-shrink: 0; }
+
+    .form-label {
+      color: #737373;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      min-width: 140px;
+      flex-shrink: 0;
+    }
+
     input[type="text"] {
       flex: 1;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      color: var(--text);
-      padding: 6px 10px;
-      font-size: 13px;
-      font-family: 'Consolas', monospace;
+      background: #0a0a0a;
+      border: 1px solid #404040;
+      color: #e5e5e5;
+      padding: 5px 8px;
+      font-size: 11px;
+      font-family: 'Consolas', 'Cascadia Mono', monospace;
       min-width: 0;
+      outline: none;
+      transition: border-color 0.15s;
     }
-    input[type="text"]:focus { outline: none; border-color: var(--accent2); }
+    input[type="text"]:focus { border-color: #f59e0b; }
+
     /* ── Toggle ── */
     .toggle-row {
       display: flex;
@@ -100,115 +139,140 @@
       margin-bottom: 10px;
       cursor: pointer;
     }
-    .toggle-row:last-child { margin-bottom: 0; }
     .toggle {
       position: relative;
-      width: 36px; height: 20px;
+      width: 32px;
+      height: 18px;
       flex-shrink: 0;
     }
-    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
     .slider {
       position: absolute;
       inset: 0;
-      background: var(--border);
-      border-radius: 20px;
-      transition: .2s;
+      background: #404040;
+      border-radius: 18px;
+      transition: 0.2s;
+      cursor: pointer;
     }
     .slider::before {
       content: '';
       position: absolute;
-      width: 14px; height: 14px;
-      left: 3px; bottom: 3px;
-      background: var(--text);
+      width: 12px;
+      height: 12px;
+      left: 3px;
+      bottom: 3px;
+      background: #a3a3a3;
       border-radius: 50%;
-      transition: .2s;
+      transition: 0.2s;
     }
-    input:checked + .slider { background: var(--accent2); }
-    input:checked + .slider::before { transform: translateX(16px); }
+    input:checked + .slider { background: #d97706; }
+    input:checked + .slider::before { background: #fff; transform: translateX(14px); }
+
+    .toggle-label {
+      font-size: 12px;
+      color: #d4d4d4;
+    }
+
     /* ── Buttons ── */
     .btn {
-      padding: 6px 12px;
-      border-radius: 5px;
+      padding: 5px 10px;
       border: none;
       cursor: pointer;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 500;
-      transition: opacity .15s;
+      font-family: inherit;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: background 0.15s;
       flex-shrink: 0;
-    }
-    .btn:hover { opacity: .85; }
-    .btn:active { opacity: .7; }
-    .btn-secondary {
-      background: var(--border);
-      color: var(--text);
-    }
-    .btn-accent {
-      background: var(--accent);
-      color: #fff;
-    }
-    .btn-blue {
-      background: var(--accent2);
-      color: #fff;
-    }
-    /* ── Token box ── */
-    .token-box {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      padding: 6px 10px;
-    }
-    .token-text {
-      flex: 1;
-      font-family: 'Consolas', monospace;
-      font-size: 12px;
-      color: var(--ok);
-      overflow: hidden;
-      text-overflow: ellipsis;
       white-space: nowrap;
     }
-    /* ── SSE URL ── */
-    .sse-url {
-      font-family: 'Consolas', monospace;
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 8px;
-      word-break: break-all;
+    .btn-neutral {
+      background: #262626;
+      border: 1px solid #404040;
+      color: #d4d4d4;
     }
+    .btn-neutral:hover { background: #333333; }
+    .btn-amber {
+      background: #d97706;
+      color: #000;
+    }
+    .btn-amber:hover { background: #f59e0b; }
+    .btn-full {
+      width: 100%;
+      padding: 7px 10px;
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    /* ── Separator ── */
+    .sep {
+      border: none;
+      border-top: 1px solid #262626;
+      margin: 10px 0;
+    }
+
     /* ── Flash ── */
     #flash {
       position: fixed;
-      bottom: 16px; left: 50%;
+      bottom: 14px;
+      left: 50%;
       transform: translateX(-50%);
-      background: var(--accent2);
-      color: #fff;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 12px;
+      background: #171717;
+      border: 1px solid #404040;
+      color: #e5e5e5;
+      padding: 5px 14px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
       opacity: 0;
-      transition: opacity .3s;
+      transition: opacity 0.25s;
       pointer-events: none;
     }
     #flash.show { opacity: 1; }
+    #flash.ok   { border-color: #10b981; color: #10b981; }
+    #flash.err  { border-color: #ef4444; color: #ef4444; }
   </style>
 </head>
 <body>
 
 <header>
-  <!-- Fox icon inline SVG -->
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.5C16.5 22.15 20 17.25 20 12V6L12 2z" fill="#e05a2b" opacity=".9"/>
-    <path d="M12 6l-2 4h4l-2-4z" fill="#fff" opacity=".8"/>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="36" height="36" style="flex-shrink:0">
+    <rect width="512" height="512" rx="112" fill="#141419" />
+    <g transform="translate(256, 256) scale(2.3)">
+      <polygon points="0,-100 86.6,-50 86.6,50 0,100 -86.6,50 -86.6,-50" fill="#1e1e26" stroke="#2d2d38" stroke-width="6" stroke-linejoin="round" />
+      <line x1="-86.6" y1="-50" x2="86.6" y2="50" stroke="#2d2d38" stroke-width="2" opacity="0.6"/>
+      <line x1="86.6" y1="-50" x2="-86.6" y2="50" stroke="#2d2d38" stroke-width="2" opacity="0.6"/>
+      <line x1="0" y1="-100" x2="0" y2="100" stroke="#2d2d38" stroke-width="2" opacity="0.6"/>
+      <g transform="translate(0, -10) scale(1.2)">
+        <polygon points="-60,-70 -20,-10 -70,30" fill="#a04000" stroke="#a04000" stroke-linejoin="round" />
+        <polygon points="60,-70 20,-10 70,30" fill="#a04000" stroke="#a04000" stroke-linejoin="round" />
+        <polygon points="-50,-50 -25,-10 -50,10" fill="#141419" stroke-linejoin="round" />
+        <polygon points="50,-50 25,-10 50,10" fill="#141419" stroke-linejoin="round" />
+        <polygon points="-30,-20 0,-30 30,-20 50,20 0,60 -50,20" fill="#d35400" stroke-linejoin="round" />
+        <polygon points="-50,20 -80,40 -20,80 0,60" fill="#e67e22" stroke-linejoin="round" />
+        <polygon points="50,20 80,40 20,80 0,60" fill="#e67e22" stroke-linejoin="round" />
+        <polygon points="-20,80 20,80 0,110" fill="#141419" stroke-linejoin="round" />
+        <polygon points="-20,80 0,60 20,80 0,90" fill="#e67e22" stroke-linejoin="round" />
+        <polygon points="-40,30 -15,40 -25,45" fill="#f1c40f" />
+        <polygon points="40,30 15,40 25,45" fill="#f1c40f" />
+      </g>
+    </g>
   </svg>
-  <h1>Foxwar Bridge</h1>
-  <span class="version" id="versionLabel">v0.1.0</span>
+  <div class="brand-name">
+    <span class="brand-foxwar">Foxwar</span>
+    <span class="brand-bridge">Bridge</span>
+  </div>
+  <span class="version-badge" id="versionLabel">v0.1.0</span>
 </header>
 
-<!-- STATUS -->
+<!-- ÉTAT -->
 <div class="card">
-  <h2>État</h2>
+  <div class="card-title">État</div>
+
   <div class="stat-row">
     <div class="dot" id="dotWatcher"></div>
     <span class="stat-label">Surveillance</span>
@@ -217,7 +281,7 @@
   <div class="stat-row">
     <div class="dot" id="dotPath"></div>
     <span class="stat-label">Dossier SaveGames</span>
-    <span class="stat-value" id="statusPath" style="font-size:12px;font-family:Consolas,monospace">—</span>
+    <span class="stat-value mono" id="statusPath">—</span>
   </div>
   <div class="stat-row">
     <div class="dot ok"></div>
@@ -229,60 +293,40 @@
     <span class="stat-label">Dernier événement</span>
     <span class="stat-value" id="statusLastEvent">Jamais</span>
   </div>
+
+  <button class="btn btn-neutral btn-full" id="btnRefresh">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square">
+      <path d="M1 4v6h6M23 20v-6h-6"/>
+      <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>
+    </svg>
+    Relire le fichier SAV
+  </button>
 </div>
 
 <!-- PARAMÈTRES -->
 <div class="card">
-  <h2>Paramètres</h2>
+  <div class="card-title">Paramètres</div>
 
   <label class="toggle-row" id="toggleAutostart">
     <span class="toggle">
       <input type="checkbox" id="chkAutostart">
       <span class="slider"></span>
     </span>
-    <span>Lancer au démarrage de Windows</span>
+    <span class="toggle-label">Lancer au démarrage de Windows</span>
   </label>
 
   <div class="form-row">
-    <label>Dossier SaveGames</label>
+    <span class="form-label">Dossier SaveGames</span>
     <input type="text" id="inpPath" placeholder="C:\Users\…\SaveGames" readonly>
-    <button class="btn btn-secondary" id="btnBrowse">Parcourir…</button>
-  </div>
-
-  <div class="form-row">
-    <label>Origine CORS</label>
-    <input type="text" id="inpOrigin" placeholder="* ou https://foxwar.example.com">
-    <button class="btn btn-secondary" id="btnSaveOrigin">Appliquer</button>
+    <button class="btn btn-neutral" id="btnBrowse">Parcourir</button>
   </div>
 </div>
 
-<!-- JETON DE SÉCURITÉ -->
-<div class="card">
-  <h2>Jeton de sécurité</h2>
-  <div class="token-box">
-    <span class="token-text" id="tokenDisplay">…</span>
-    <button class="btn btn-secondary" id="btnCopy">Copier</button>
-    <button class="btn btn-accent" id="btnRegen" title="Générer un nouveau jeton (déconnecte les clients actuels)">↺ Nouveau</button>
-  </div>
-  <div class="sse-url" id="sseUrl">http://localhost:7842/sse?token=…</div>
-
-  <div style="margin-top:10px">
-    <button class="btn btn-blue" id="btnRefresh" style="width:100%">
-      ⟳ Forcer la relecture du fichier SAV
-    </button>
-  </div>
-</div>
-
-<div id="flash">Copié !</div>
+<div id="flash"></div>
 
 <script>
-  // Tauri v2 expose les APIs via window.__TAURI__ quand withGlobalTauri: true
   const invoke = window.__TAURI__.core.invoke;
 
-  let currentToken = '';
-  let currentPort  = 7842;
-
-  // ── Refresh de l'état toutes les 3 s ─────────────────────────────────────
   async function refreshStatus() {
     try {
       const st = await invoke('get_status');
@@ -292,66 +336,45 @@
 
       setDot('dotPath', st.sav_path_exists ? 'ok' : (st.sav_path_exists === false ? 'warn' : 'off'));
       const settings = await invoke('get_settings');
-      document.getElementById('statusPath').textContent =
-        settings.sav_path ?? '(non configuré)';
+      document.getElementById('statusPath').textContent = settings.sav_path ?? '(non configuré)';
       document.getElementById('inpPath').value = settings.sav_path ?? '';
-      document.getElementById('inpOrigin').value = settings.allowed_origin ?? '*';
       document.getElementById('chkAutostart').checked = st.autostart;
-      currentPort = st.port;
 
       document.getElementById('statusClients').textContent = st.client_count;
 
       setDot('dotEvent', st.last_event ? 'ok' : 'off');
       document.getElementById('statusLastEvent').textContent =
         st.last_event ? timeAgo(new Date(st.last_event)) : 'Jamais';
-
-      updateSseUrl();
     } catch (e) {
       console.error('get_status error:', e);
     }
   }
 
-  async function refreshToken() {
-    try {
-      const s = await invoke('get_settings');
-      currentToken = s.token;
-      document.getElementById('tokenDisplay').textContent = currentToken;
-      updateSseUrl();
-    } catch(e) {}
-  }
-
-  function updateSseUrl() {
-    document.getElementById('sseUrl').textContent =
-      `http://localhost:${currentPort}/sse?token=${currentToken}`;
-  }
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
   function setDot(id, cls) {
-    const el = document.getElementById(id);
-    el.className = 'dot ' + cls;
+    document.getElementById(id).className = 'dot ' + cls;
   }
 
   function timeAgo(date) {
     const secs = Math.floor((Date.now() - date) / 1000);
     if (secs < 60) return `il y a ${secs}s`;
-    if (secs < 3600) return `il y a ${Math.floor(secs/60)}min`;
-    return `il y a ${Math.floor(secs/3600)}h`;
+    if (secs < 3600) return `il y a ${Math.floor(secs / 60)}min`;
+    return `il y a ${Math.floor(secs / 3600)}h`;
   }
 
-  function flash(msg = 'Copié !') {
+  function flash(msg, type = '') {
     const el = document.getElementById('flash');
     el.textContent = msg;
-    el.classList.add('show');
-    setTimeout(() => el.classList.remove('show'), 1800);
+    el.className = type ? `show ${type}` : 'show';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.className = ''; }, 1800);
   }
 
-  // ── Événements ────────────────────────────────────────────────────────────
   document.getElementById('chkAutostart').addEventListener('change', async e => {
     try {
       await invoke('set_autostart', { enabled: e.target.checked });
-    } catch(err) {
+    } catch (err) {
       e.target.checked = !e.target.checked;
-      flash('Erreur : ' + err);
+      flash('Erreur : ' + err, 'err');
     }
   });
 
@@ -360,43 +383,19 @@
       const dir = await invoke('pick_directory');
       if (dir) {
         await invoke('set_sav_path', { path: dir });
-        flash('Chemin enregistré');
+        flash('Chemin enregistré', 'ok');
         refreshStatus();
       }
-    } catch(e) { flash('Erreur : ' + e); }
-  });
-
-  document.getElementById('btnSaveOrigin').addEventListener('click', async () => {
-    const origin = document.getElementById('inpOrigin').value.trim() || '*';
-    try {
-      await invoke('set_allowed_origin', { origin });
-      flash('Origine CORS mise à jour (redémarrage requis)');
-    } catch(e) { flash('Erreur : ' + e); }
-  });
-
-  document.getElementById('btnCopy').addEventListener('click', () => {
-    navigator.clipboard.writeText(currentToken).then(() => flash('Token copié !'));
-  });
-
-  document.getElementById('btnRegen').addEventListener('click', async () => {
-    if (!confirm('Générer un nouveau jeton ? Les clients actuellement connectés seront déconnectés.')) return;
-    try {
-      currentToken = await invoke('regenerate_token');
-      document.getElementById('tokenDisplay').textContent = currentToken;
-      updateSseUrl();
-      flash('Nouveau jeton généré');
-    } catch(e) { flash('Erreur : ' + e); }
+    } catch (e) { flash('Erreur : ' + e, 'err'); }
   });
 
   document.getElementById('btnRefresh').addEventListener('click', async () => {
     try {
       await invoke('trigger_refresh');
-      flash('Fichier SAV relu et diffusé');
-    } catch(e) { flash('Erreur : ' + e); }
+      flash('Fichier SAV relu', 'ok');
+    } catch (e) { flash('Erreur : ' + e, 'err'); }
   });
 
-  // ── Init ──────────────────────────────────────────────────────────────────
-  refreshToken();
   refreshStatus();
   setInterval(refreshStatus, 3000);
 </script>

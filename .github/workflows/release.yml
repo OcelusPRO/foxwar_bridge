@@ -35,9 +35,9 @@ jobs:
           $cMaj, $cMin, $_ = $cargo -split '\.'
 
           # Recherche du dernier tag pour ce major.minor
-          $tags = git tag --list "v$cMaj.$cMin.*" 2>$null |
+          $tags = @(git tag --list "v$cMaj.$cMin.*" 2>$null |
                   Where-Object { $_ -match '^v\d+\.\d+\.\d+$' } |
-                  Sort-Object { [int]($_ -replace "^v$cMaj\.$cMin\.", '') } -Descending
+                  Sort-Object { [int]($_ -replace "^v$cMaj\.$cMin\.", '') } -Descending)
 
           if ($tags) {
               $topPatch = [int](($tags[0]) -replace "^v$cMaj\.$cMin\.", '')
