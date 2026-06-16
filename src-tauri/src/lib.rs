@@ -86,6 +86,14 @@ pub fn run() {
                 }
             });
 
+            // Vide le cache WebView2 au lancement : après une mise à jour, le
+            // webview peut sinon resservir l'ancienne UI (HTML/JS) depuis son cache.
+            if let Some(win) = app.get_webview_window("main") {
+                if let Err(e) = win.clear_all_browsing_data() {
+                    log::warn!("clear_all_browsing_data failed: {e}");
+                }
+            }
+
             tray::setup(app)?;
 
             // Démarrage du watcher de fichier (surveille en arrière-plan, SSE off)

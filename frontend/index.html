@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Empêche WebView2 de servir une ancienne UI en cache après une mise à jour. -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Foxwar Bridge</title>
   <style>
     /* ── Tailwind design tokens (neutral + amber, Inter) ── */
@@ -474,11 +478,16 @@
   async function checkUpdate() {
     try {
       const info = await invoke('check_update');
-      if (info) {
+      const card = document.getElementById('updateCard');
+      if (info && info.download_url) {
         pendingUpdateUrl = info.download_url;
         document.getElementById('updateVersion').textContent = 'v' + info.version;
         document.getElementById('updateNotes').textContent = info.notes || '';
-        document.getElementById('updateCard').style.display = '';
+        card.style.display = '';
+      } else {
+        // Déjà à jour : on garantit que la carte ne reste jamais affichée à tort.
+        pendingUpdateUrl = null;
+        card.style.display = 'none';
       }
     } catch (e) {
       console.error('check_update error:', e);
@@ -490,7 +499,13 @@
   }
 
   document.getElementById('btnInstallUpdate').addEventListener('click', async () => {
-    if (!pendingUpdateUrl) return;
+    if (!pendingUpdateUrl) {
+      // Carte affichée sans cible (état obsolète) : on resynchronise et on cache.
+      document.getElementById('updateCard').style.display = 'none';
+      flash('Aucune mise à jour à installer', 'ok');
+      checkUpdate();
+      return;
+    }
     const btn = document.getElementById('btnInstallUpdate');
     const err = document.getElementById('updateError');
     const prog = document.getElementById('updateProgress');
