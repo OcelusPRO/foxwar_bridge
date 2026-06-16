@@ -6,6 +6,7 @@
 //! l'application déjà installée.
 
 use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter, Runtime};
 
 const REPO: &str = "OcelusPRO/foxwar_bridge";
 const USER_AGENT: &str = concat!("foxwar-bridge/", env!("CARGO_PKG_VERSION"));
@@ -16,6 +17,16 @@ pub struct UpdateInfo {
     pub version: String,
     pub notes: String,
     pub download_url: String,
+}
+
+/// Frame de progression émise vers le frontend via l'event `update://progress`.
+#[derive(Serialize, Clone)]
+struct Progress {
+    /// "downloading" | "launching"
+    phase: &'static str,
+    downloaded: u64,
+    total: Option<u64>,
+    pct: f64,
 }
 
 #[derive(Deserialize)]
@@ -59,8 +70,9 @@ fn client() -> Result<reqwest::Client, String> {
         .map_err(|e| e.to_string())
 }
 
-/// Interroge GitHub et renvoie une `UpdateInfo` si une version plus récente existe.
-pub async fn check() -> Result<Option<UpdateInfo>, String> {
+/// Interroge GitHub et renvoie une `UpdateInfo` si une version plus récente que
+/// `current` existe. `current` doit être la version embarquée (tauri.conf.json).
+pub async fn check(current: &str) -> Result<Option<UpdateInfo>, String> {
     // En build de développement, la version locale (0.1.0) est toujours
     // antérieure à la dernière release publiée : on n'afficherait que de fausses
     // mises à jour. Seuls les builds release (produits par la CI) vérifient.
@@ -82,7 +94,6 @@ pub async fn check() -> Result<Option<UpdateInfo>, String> {
         .await
         .map_err(|e| e.to_string())?;
 
-    let current = env!("CARGO_PKG_VERSION");
     log::info!("Update check: current {current}, latest {}", rel.tag_name);
     if !is_newer(&rel.tag_name, current) {
         return Ok(None);
@@ -104,27 +115,64 @@ pub async fn check() -> Result<Option<UpdateInfo>, String> {
     }))
 }
 
-/// Télécharge l'installeur dans le dossier temp et le lance.
-/// L'appelant est responsable de quitter l'application ensuite.
-pub async fn download_and_run(url: &str) -> Result<(), String> {
+/// Télécharge l'installeur (en flux, avec progression émise vers le frontend)
+/// puis le lance. L'appelant est responsable de quitter l'application ensuite.
+pub async fn download_and_run<R: Runtime>(app: &AppHandle<R>, url: &str) -> Result<(), String> {
+    use futures::StreamExt;
+    use std::io::Write;
+
     log::info!("Downloading update from {url}");
-    let bytes = client()?
+    let resp = client()?
         .get(url)
         .send()
         .await
         .map_err(|e| format!("Téléchargement impossible : {e}"))?
         .error_for_status()
-        .map_err(|e| format!("Réponse HTTP en erreur : {e}"))?
-        .bytes()
-        .await
-        .map_err(|e| format!("Lecture du flux impossible : {e}"))?;
+        .map_err(|e| format!("Réponse HTTP en erreur : {e}"))?;
 
+    let total = resp.content_length();
     let filename = url.rsplit('/').next().unwrap_or("foxwar-bridge-setup.exe");
     let dest = std::env::temp_dir().join(filename);
-    std::fs::write(&dest, &bytes)
-        .map_err(|e| format!("Écriture du fichier impossible : {e}"))?;
+    let mut file =
+        std::fs::File::create(&dest).map_err(|e| format!("Création du fichier impossible : {e}"))?;
 
-    log::info!("Update downloaded to {} ({} bytes)", dest.display(), bytes.len());
+    let emit = |phase, downloaded, pct| {
+        let _ = app.emit("update://progress", Progress { phase, downloaded, total, pct });
+    };
+
+    emit("downloading", 0, 0.0);
+
+    let mut stream = resp.bytes_stream();
+    let mut downloaded: u64 = 0;
+    let mut last_pct = -1.0_f64;
+    let mut last_emit: u64 = 0;
+
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| format!("Lecture du flux impossible : {e}"))?;
+        file.write_all(&chunk)
+            .map_err(|e| format!("Écriture du fichier impossible : {e}"))?;
+        downloaded += chunk.len() as u64;
+
+        let pct = match total {
+            Some(t) if t > 0 => downloaded as f64 / t as f64 * 100.0,
+            _ => 0.0,
+        };
+        // Limite la fréquence des events : tous les 1 % (taille connue) ou 256 Ko.
+        let should_emit = match total {
+            Some(_) => pct - last_pct >= 1.0,
+            None => downloaded - last_emit >= 262_144,
+        };
+        if should_emit {
+            last_pct = pct;
+            last_emit = downloaded;
+            emit("downloading", downloaded, pct);
+        }
+    }
+    file.flush().ok();
+    drop(file);
+
+    log::info!("Update downloaded to {} ({downloaded} bytes)", dest.display());
+    emit("launching", downloaded, 100.0);
 
     std::process::Command::new(&dest)
         .spawn()

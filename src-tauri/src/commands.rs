@@ -133,26 +133,30 @@ pub async fn trigger_refresh(state: State<'_, AppState>) -> Result<(), String> {
 
 // ─── Mises à jour ──────────────────────────────────────────────────────────────
 
-/// Version courante de l'application (injectée au build, patchée par la CI).
+/// Version courante de l'application, lue depuis le bundle (tauri.conf.json).
+/// C'est la même source que le nom de l'installeur → toujours cohérente.
 #[command]
-pub fn get_version() -> String {
-    env!("CARGO_PKG_VERSION").to_string()
+pub fn get_version<R: tauri::Runtime>(app: AppHandle<R>) -> String {
+    app.package_info().version.to_string()
 }
 
 /// Vérifie si une mise à jour est disponible sur GitHub Releases.
 #[command]
-pub async fn check_update() -> Result<Option<crate::updater::UpdateInfo>, String> {
-    crate::updater::check().await
+pub async fn check_update<R: tauri::Runtime>(app: AppHandle<R>) -> Result<Option<crate::updater::UpdateInfo>, String> {
+    let current = app.package_info().version.to_string();
+    crate::updater::check(&current).await
 }
 
 /// Télécharge et lance l'installeur de la mise à jour, puis quitte l'app.
+/// La progression est émise via l'event `update://progress`.
 #[command]
 pub async fn install_update<R: tauri::Runtime>(url: String, app: AppHandle<R>) -> Result<(), String> {
-    crate::updater::download_and_run(&url).await?;
+    crate::updater::download_and_run(&app, &url).await?;
     // Laisse l'installeur démarrer avant de libérer l'exe en cours d'exécution.
+    let app2 = app.clone();
     tauri::async_runtime::spawn(async move {
-        tokio::time::sleep(std::time::Duration::from_millis(800)).await;
-        app.exit(0);
+        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+        app2.exit(0);
     });
     Ok(())
 }
