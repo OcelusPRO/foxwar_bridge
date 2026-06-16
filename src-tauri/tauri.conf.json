@@ -46,7 +46,6 @@
       "desktop": {
         "schemes": ["foxwar"]
       }
-    },
-    "single-instance": {}
+    }
   }
 }
