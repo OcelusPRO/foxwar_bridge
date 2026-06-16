@@ -23,6 +23,11 @@ pub struct Settings {
     /// Origine autorisée pour CORS (ex. "https://foxwar.example.com" ou "*")
     #[serde(default = "default_origin")]
     pub allowed_origin: String,
+
+    /// Démarre sans fenêtre (tray uniquement) lorsqu'il est lancé au démarrage
+    /// de Windows. Sans effet sur un lancement manuel.
+    #[serde(default)]
+    pub silent_start: bool,
 }
 
 impl Default for Settings {
@@ -33,6 +38,7 @@ impl Default for Settings {
             token: generate_token(),
             port: default_port(),
             allowed_origin: default_origin(),
+            silent_start: false,
         }
     }
 }

@@ -97,6 +97,13 @@ pub async fn set_allowed_origin(origin: String, state: State<'_, AppState>) -> R
     state.settings.read().unwrap().save().map_err(|e| e.to_string())
 }
 
+/// Active/désactive le démarrage sans fenêtre (tray uniquement) au démarrage Windows.
+#[command]
+pub async fn set_silent_start(enabled: bool, state: State<'_, AppState>) -> Result<(), String> {
+    state.settings.write().unwrap().silent_start = enabled;
+    state.settings.read().unwrap().save().map_err(|e| e.to_string())
+}
+
 #[command]
 pub async fn regenerate_token(state: State<'_, AppState>) -> Result<String, String> {
     let token = generate_token();

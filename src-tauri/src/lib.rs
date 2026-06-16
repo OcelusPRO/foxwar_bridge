@@ -69,7 +69,9 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            None,
+            // Passé par Windows au démarrage : permet de distinguer un lancement
+            // automatique d'un lancement manuel (cf. démarrage silencieux).
+            Some(vec!["--minimized"]),
         ))
         .plugin(tauri_plugin_dialog::init())
         // ── État ─────────────────────────────────────────────────────────────
@@ -92,6 +94,30 @@ pub fn run() {
                 if let Err(e) = win.clear_all_browsing_data() {
                     log::warn!("clear_all_browsing_data failed: {e}");
                 }
+            }
+
+            // Rafraîchit la commande d'autostart pour qu'elle inclue bien
+            // `--minimized` (utile pour les installations où l'autostart était
+            // déjà activé avant l'ajout de cette option).
+            {
+                use tauri_plugin_autostart::ManagerExt;
+                let manager = app.autolaunch();
+                if manager.is_enabled().unwrap_or(false) {
+                    let _ = manager.enable();
+                }
+            }
+
+            // Démarrage silencieux : si l'app est lancée au démarrage de Windows
+            // (`--minimized`) et que l'option est active, on laisse la fenêtre
+            // masquée (tray uniquement). Sinon on l'affiche.
+            let launched_minimized = std::env::args().any(|a| a == "--minimized");
+            let silent_start = app.state::<AppState>().settings.read().unwrap().silent_start;
+            if !(launched_minimized && silent_start) {
+                if let Some(win) = app.get_webview_window("main") {
+                    let _ = win.show();
+                }
+            } else {
+                log::info!("Silent start: window hidden (tray only)");
             }
 
             tray::setup(app)?;
@@ -125,6 +151,7 @@ pub fn run() {
             commands::set_autostart,
             commands::set_sav_path,
             commands::set_allowed_origin,
+            commands::set_silent_start,
             commands::regenerate_token,
             commands::pick_directory,
             commands::trigger_refresh,

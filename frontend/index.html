@@ -372,6 +372,14 @@
     <span class="toggle-label">Lancer au démarrage de Windows</span>
   </label>
 
+  <label class="toggle-row" id="toggleSilent">
+    <span class="toggle">
+      <input type="checkbox" id="chkSilent">
+      <span class="slider"></span>
+    </span>
+    <span class="toggle-label">Démarrer sans fenêtre (au démarrage de Windows)</span>
+  </label>
+
   <div class="form-row">
     <span class="form-label">Dossier SaveGames</span>
     <input type="text" id="inpPath" placeholder="C:\Users\…\SaveGames" readonly>
@@ -409,6 +417,7 @@
       document.getElementById('statusPath').textContent = settings.sav_path ?? '(non configuré)';
       document.getElementById('inpPath').value = settings.sav_path ?? '';
       document.getElementById('chkAutostart').checked = st.autostart;
+      document.getElementById('chkSilent').checked = settings.silent_start ?? false;
 
       document.getElementById('statusClients').textContent = st.client_count;
 
@@ -442,6 +451,15 @@
   document.getElementById('chkAutostart').addEventListener('change', async e => {
     try {
       await invoke('set_autostart', { enabled: e.target.checked });
+    } catch (err) {
+      e.target.checked = !e.target.checked;
+      flash('Erreur : ' + err, 'err');
+    }
+  });
+
+  document.getElementById('chkSilent').addEventListener('change', async e => {
+    try {
+      await invoke('set_silent_start', { enabled: e.target.checked });
     } catch (err) {
       e.target.checked = !e.target.checked;
       flash('Erreur : ' + err, 'err');
