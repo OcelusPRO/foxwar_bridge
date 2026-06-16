@@ -87,47 +87,63 @@ pub fn broadcast_latest_in_dir(
     tx: &broadcast::Sender<String>,
     last_event: &Arc<Mutex<Option<DateTime<Utc>>>>,
 ) {
-    let pattern = sav_pattern();
-    let entry = std::fs::read_dir(dir).ok().and_then(|entries| {
-        entries
-            .filter_map(|e| e.ok())
-            .filter(|e| {
-                let name = e.file_name();
-                pattern.is_match(name.to_str().unwrap_or(""))
-            })
-            .max_by_key(|e| e.metadata().and_then(|m| m.modified()).ok())
-    });
-
-    match entry {
-        Some(e) => broadcast_file(&e.path(), tx, last_event),
+    match latest_sav(dir) {
+        Some(path) => broadcast_file(&path, tx, last_event),
         None => log::debug!("No MapData.sav found in {}", dir.display()),
     }
 }
 
-/// Lit `path`, encode en base64 et publie l'événement SSE.
-fn broadcast_file(
-    path: &PathBuf,
-    tx: &broadcast::Sender<String>,
-    last_event: &Arc<Mutex<Option<DateTime<Utc>>>>,
-) {
+/// Construit le payload SSE JSON pour le fichier SAV le plus récent de `dir`,
+/// sans le diffuser. Utilisé pour pousser l'état courant à un client qui vient
+/// de se connecter.
+pub fn build_latest_payload(dir: &Path) -> Option<String> {
+    read_payload(&latest_sav(dir)?)
+}
+
+/// Trouve le fichier MapData.sav le plus récent (par date de modification) dans `dir`.
+fn latest_sav(dir: &Path) -> Option<PathBuf> {
+    let pattern = sav_pattern();
+    std::fs::read_dir(dir).ok().and_then(|entries| {
+        entries
+            .filter_map(|e| e.ok())
+            .filter(|e| pattern.is_match(e.file_name().to_str().unwrap_or("")))
+            .map(|e| e.path())
+            .max_by_key(|p| std::fs::metadata(p).and_then(|m| m.modified()).ok())
+    })
+}
+
+/// Lit `path`, encode en base64 et construit le payload JSON `sav_updated`.
+fn read_payload(path: &Path) -> Option<String> {
     match std::fs::read(path) {
         Ok(bytes) => {
             let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-            let now = Utc::now();
             let payload = serde_json::json!({
                 "type": "sav_updated",
-                "timestamp": now.timestamp(),
+                "timestamp": Utc::now().timestamp(),
                 "path": path.to_string_lossy(),
                 "file": b64
             })
             .to_string();
-
-            if tx.send(payload).is_err() {
-                log::debug!("No SSE subscribers at the moment");
-            }
-            *last_event.lock().unwrap() = Some(now);
-            log::info!("Broadcast SAV: {} ({} bytes)", path.display(), bytes.len());
+            log::info!("Read SAV: {} ({} bytes)", path.display(), bytes.len());
+            Some(payload)
         }
-        Err(e) => log::error!("Failed to read {}: {e}", path.display()),
+        Err(e) => {
+            log::error!("Failed to read {}: {e}", path.display());
+            None
+        }
+    }
+}
+
+/// Construit le payload du fichier et le diffuse à tous les abonnés SSE.
+fn broadcast_file(
+    path: &Path,
+    tx: &broadcast::Sender<String>,
+    last_event: &Arc<Mutex<Option<DateTime<Utc>>>>,
+) {
+    if let Some(payload) = read_payload(path) {
+        if tx.send(payload).is_err() {
+            log::debug!("No SSE subscribers at the moment");
+        }
+        *last_event.lock().unwrap() = Some(Utc::now());
     }
 }

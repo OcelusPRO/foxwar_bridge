@@ -1,5 +1,7 @@
-use std::{collections::HashMap, convert::Infallible, sync::Arc};
+use std::path::Path;
+use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::{collections::HashMap, convert::Infallible};
 
 use axum::{
     extract::{Query, State},
@@ -14,11 +16,15 @@ use tokio::sync::{broadcast, oneshot};
 use tokio_stream::wrappers::BroadcastStream;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
+use crate::settings::Settings;
+
 #[derive(Clone)]
 pub struct SseState {
     pub token: String,
     pub tx: broadcast::Sender<String>,
     pub client_count: Arc<AtomicUsize>,
+    /// Settings partagés : permet de lire `sav_path` à la connexion d'un client.
+    pub settings: Arc<RwLock<Settings>>,
 }
 
 #[derive(Serialize)]
@@ -36,9 +42,10 @@ pub async fn start(
     port: u16,
     allowed_origin: String,
     client_count: Arc<AtomicUsize>,
+    settings: Arc<RwLock<Settings>>,
     shutdown: oneshot::Receiver<()>,
 ) {
-    let state = SseState { token, tx, client_count };
+    let state = SseState { token, tx, client_count, settings };
     let cors = build_cors(&allowed_origin);
 
     let app = Router::new()
@@ -94,14 +101,35 @@ async fn sse_handler(
     state.client_count.fetch_add(1, Ordering::Relaxed);
     let guard = ClientGuard(Arc::clone(&state.client_count));
 
+    // ── Envoi immédiat de l'état courant ──────────────────────────────────────
+    // Le nouveau client reçoit directement le dernier MapData.sav connu, sans
+    // attendre la prochaine modification de fichier.
+    let dir_opt = state.settings.read().unwrap().sav_path.clone();
+    let initial = match dir_opt {
+        Some(dir) => tokio::task::spawn_blocking(move || {
+            crate::watcher::build_latest_payload(Path::new(&dir))
+        })
+        .await
+        .ok()
+        .flatten(),
+        None => None,
+    };
+    let initial_stream = futures::stream::iter(
+        initial
+            .into_iter()
+            .map(|data| Ok::<Event, Infallible>(Event::default().data(data))),
+    );
+
+    // ── Flux live des modifications suivantes ─────────────────────────────────
     let rx = state.tx.subscribe();
-    let stream = BroadcastStream::new(rx)
+    let live = BroadcastStream::new(rx)
         .filter_map(|r| async { r.ok() })
         .map(move |data| {
             let _ = &guard;
             Ok::<Event, Infallible>(Event::default().data(data))
         });
 
+    let stream = initial_stream.chain(live);
     Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
 }
 

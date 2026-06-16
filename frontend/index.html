@@ -208,6 +208,27 @@
       gap: 6px;
     }
 
+    /* ── Update card ── */
+    .card-update {
+      border-color: #d97706;
+      border-left-width: 3px;
+    }
+    .update-text {
+      font-size: 12px;
+      color: #d4d4d4;
+      margin-bottom: 4px;
+    }
+    .update-text b { color: #f59e0b; }
+    .update-notes {
+      font-size: 11px;
+      color: #737373;
+      max-height: 72px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      margin-bottom: 10px;
+      padding-right: 4px;
+    }
+
     /* ── Separator ── */
     .sep {
       border: none;
@@ -322,6 +343,14 @@
   </div>
 </div>
 
+<!-- MISE À JOUR (masquée tant qu'aucune version n'est disponible) -->
+<div class="card card-update" id="updateCard" style="display:none">
+  <div class="card-title">Mise à jour disponible</div>
+  <div class="update-text">Nouvelle version <b id="updateVersion">—</b> disponible.</div>
+  <div class="update-notes" id="updateNotes"></div>
+  <button class="btn btn-amber btn-full" id="btnInstallUpdate">Télécharger et installer</button>
+</div>
+
 <div id="flash"></div>
 
 <script>
@@ -396,8 +425,48 @@
     } catch (e) { flash('Erreur : ' + e, 'err'); }
   });
 
+  // ── Version (injectée au build) ───────────────────────────────────────────
+  invoke('get_version')
+    .then(v => { document.getElementById('versionLabel').textContent = 'v' + v; })
+    .catch(() => {});
+
+  // ── Mises à jour ──────────────────────────────────────────────────────────
+  const UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 h
+  let pendingUpdateUrl = null;
+
+  async function checkUpdate() {
+    try {
+      const info = await invoke('check_update');
+      if (info) {
+        pendingUpdateUrl = info.download_url;
+        document.getElementById('updateVersion').textContent = 'v' + info.version;
+        document.getElementById('updateNotes').textContent = info.notes || '';
+        document.getElementById('updateCard').style.display = '';
+      }
+    } catch (e) {
+      console.error('check_update error:', e);
+    }
+  }
+
+  document.getElementById('btnInstallUpdate').addEventListener('click', async () => {
+    if (!pendingUpdateUrl) return;
+    const btn = document.getElementById('btnInstallUpdate');
+    btn.disabled = true;
+    btn.textContent = 'Téléchargement…';
+    try {
+      await invoke('install_update', { url: pendingUpdateUrl });
+      btn.textContent = 'Lancement de l’installeur…';
+    } catch (e) {
+      flash('Erreur de mise à jour : ' + e, 'err');
+      btn.disabled = false;
+      btn.textContent = 'Télécharger et installer';
+    }
+  });
+
   refreshStatus();
   setInterval(refreshStatus, 3000);
+  checkUpdate();
+  setInterval(checkUpdate, UPDATE_INTERVAL_MS);
 </script>
 </body>
 </html>

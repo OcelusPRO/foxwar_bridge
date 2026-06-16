@@ -113,9 +113,10 @@ async fn start_sse_server(app: tauri::AppHandle, port: u16, token: String, origi
 
     let tx = state.sse_tx.clone();
     let cc = Arc::clone(&state.client_count);
+    let settings = Arc::clone(&state.settings);
 
     log::info!("Starting SSE server on port {port}");
-    crate::sse_server::start(tx, token, port, origin, cc, shutdown_rx).await;
+    crate::sse_server::start(tx, token, port, origin, cc, settings, shutdown_rx).await;
     log::info!("SSE server on port {port} stopped");
 }
 

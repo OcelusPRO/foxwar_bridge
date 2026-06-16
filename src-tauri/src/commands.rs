@@ -130,3 +130,29 @@ pub async fn trigger_refresh(state: State<'_, AppState>) -> Result<(), String> {
         None => Err("Aucun chemin SAV configuré".to_string()),
     }
 }
+
+// ─── Mises à jour ──────────────────────────────────────────────────────────────
+
+/// Version courante de l'application (injectée au build, patchée par la CI).
+#[command]
+pub fn get_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
+/// Vérifie si une mise à jour est disponible sur GitHub Releases.
+#[command]
+pub async fn check_update() -> Result<Option<crate::updater::UpdateInfo>, String> {
+    crate::updater::check().await
+}
+
+/// Télécharge et lance l'installeur de la mise à jour, puis quitte l'app.
+#[command]
+pub async fn install_update<R: tauri::Runtime>(url: String, app: AppHandle<R>) -> Result<(), String> {
+    crate::updater::download_and_run(&url).await?;
+    // Laisse l'installeur démarrer avant de libérer l'exe en cours d'exécution.
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_millis(800)).await;
+        app.exit(0);
+    });
+    Ok(())
+}

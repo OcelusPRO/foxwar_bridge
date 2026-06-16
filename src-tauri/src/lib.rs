@@ -3,6 +3,7 @@ pub mod protocol;
 pub mod settings;
 pub mod sse_server;
 pub mod tray;
+pub mod updater;
 pub mod watcher;
 
 use std::sync::{Arc, Mutex, RwLock};
@@ -120,6 +121,9 @@ pub fn run() {
             commands::pick_directory,
             commands::trigger_refresh,
             commands::get_sse_status,
+            commands::get_version,
+            commands::check_update,
+            commands::install_update,
         ])
         .run(tauri::generate_context!())
         .expect("Foxwar Bridge crashed");
