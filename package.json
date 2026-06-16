@@ -1,0 +1,14 @@
+{
+  "name": "foxwar-bridge",
+  "version": "0.1.0",
+  "description": "Tauri-based local bridge for Foxwar – monitors Foxhole save files",
+  "private": true,
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

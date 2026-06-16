@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Foxwar Bridge</title>
+  <style>
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d2e;
+      --border:   #2a2d42;
+      --accent:   #e05a2b;
+      --accent2:  #3b82f6;
+      --text:     #e2e4f0;
+      --muted:    #6b7280;
+      --ok:       #22c55e;
+      --warn:     #f59e0b;
+      --err:      #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 16px;
+      user-select: none;
+    }
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    header svg { flex-shrink: 0; }
+    header h1 { font-size: 17px; font-weight: 600; }
+    header .version { margin-left: auto; color: var(--muted); font-size: 12px; }
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .card h2 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    /* ── Status row ── */
+    .stat-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 0;
+    }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot.ok   { background: var(--ok);   box-shadow: 0 0 6px var(--ok); }
+    .dot.warn { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+    .dot.off  { background: var(--muted); }
+    .stat-label { color: var(--muted); min-width: 130px; }
+    .stat-value { font-weight: 500; }
+    /* ── Form ── */
+    .form-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .form-row:last-child { margin-bottom: 0; }
+    label { color: var(--muted); min-width: 130px; flex-shrink: 0; }
+    input[type="text"] {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text);
+      padding: 6px 10px;
+      font-size: 13px;
+      font-family: 'Consolas', monospace;
+      min-width: 0;
+    }
+    input[type="text"]:focus { outline: none; border-color: var(--accent2); }
+    /* ── Toggle ── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    .toggle-row:last-child { margin-bottom: 0; }
+    .toggle {
+      position: relative;
+      width: 36px; height: 20px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 20px;
+      transition: .2s;
+    }
+    .slider::before {
+      content: '';
+      position: absolute;
+      width: 14px; height: 14px;
+      left: 3px; bottom: 3px;
+      background: var(--text);
+      border-radius: 50%;
+      transition: .2s;
+    }
+    input:checked + .slider { background: var(--accent2); }
+    input:checked + .slider::before { transform: translateX(16px); }
+    /* ── Buttons ── */
+    .btn {
+      padding: 6px 12px;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: opacity .15s;
+      flex-shrink: 0;
+    }
+    .btn:hover { opacity: .85; }
+    .btn:active { opacity: .7; }
+    .btn-secondary {
+      background: var(--border);
+      color: var(--text);
+    }
+    .btn-accent {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-blue {
+      background: var(--accent2);
+      color: #fff;
+    }
+    /* ── Token box ── */
+    .token-box {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 6px 10px;
+    }
+    .token-text {
+      flex: 1;
+      font-family: 'Consolas', monospace;
+      font-size: 12px;
+      color: var(--ok);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* ── SSE URL ── */
+    .sse-url {
+      font-family: 'Consolas', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 8px;
+      word-break: break-all;
+    }
+    /* ── Flash ── */
+    #flash {
+      position: fixed;
+      bottom: 16px; left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent2);
+      color: #fff;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      opacity: 0;
+      transition: opacity .3s;
+      pointer-events: none;
+    }
+    #flash.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<header>
+  <!-- Fox icon inline SVG -->
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.5C16.5 22.15 20 17.25 20 12V6L12 2z" fill="#e05a2b" opacity=".9"/>
+    <path d="M12 6l-2 4h4l-2-4z" fill="#fff" opacity=".8"/>
+  </svg>
+  <h1>Foxwar Bridge</h1>
+  <span class="version" id="versionLabel">v0.1.0</span>
+</header>
+
+<!-- STATUS -->
+<div class="card">
+  <h2>État</h2>
+  <div class="stat-row">
+    <div class="dot" id="dotWatcher"></div>
+    <span class="stat-label">Surveillance</span>
+    <span class="stat-value" id="statusWatcher">—</span>
+  </div>
+  <div class="stat-row">
+    <div class="dot" id="dotPath"></div>
+    <span class="stat-label">Dossier SaveGames</span>
+    <span class="stat-value" id="statusPath" style="font-size:12px;font-family:Consolas,monospace">—</span>
+  </div>
+  <div class="stat-row">
+    <div class="dot ok"></div>
+    <span class="stat-label">Clients connectés</span>
+    <span class="stat-value" id="statusClients">0</span>
+  </div>
+  <div class="stat-row">
+    <div class="dot" id="dotEvent"></div>
+    <span class="stat-label">Dernier événement</span>
+    <span class="stat-value" id="statusLastEvent">Jamais</span>
+  </div>
+</div>
+
+<!-- PARAMÈTRES -->
+<div class="card">
+  <h2>Paramètres</h2>
+
+  <label class="toggle-row" id="toggleAutostart">
+    <span class="toggle">
+      <input type="checkbox" id="chkAutostart">
+      <span class="slider"></span>
+    </span>
+    <span>Lancer au démarrage de Windows</span>
+  </label>
+
+  <div class="form-row">
+    <label>Dossier SaveGames</label>
+    <input type="text" id="inpPath" placeholder="C:\Users\…\SaveGames" readonly>
+    <button class="btn btn-secondary" id="btnBrowse">Parcourir…</button>
+  </div>
+
+  <div class="form-row">
+    <label>Origine CORS</label>
+    <input type="text" id="inpOrigin" placeholder="* ou https://foxwar.example.com">
+    <button class="btn btn-secondary" id="btnSaveOrigin">Appliquer</button>
+  </div>
+</div>
+
+<!-- JETON DE SÉCURITÉ -->
+<div class="card">
+  <h2>Jeton de sécurité</h2>
+  <div class="token-box">
+    <span class="token-text" id="tokenDisplay">…</span>
+    <button class="btn btn-secondary" id="btnCopy">Copier</button>
+    <button class="btn btn-accent" id="btnRegen" title="Générer un nouveau jeton (déconnecte les clients actuels)">↺ Nouveau</button>
+  </div>
+  <div class="sse-url" id="sseUrl">http://localhost:7842/sse?token=…</div>
+
+  <div style="margin-top:10px">
+    <button class="btn btn-blue" id="btnRefresh" style="width:100%">
+      ⟳ Forcer la relecture du fichier SAV
+    </button>
+  </div>
+</div>
+
+<div id="flash">Copié !</div>
+
+<script>
+  // Tauri v2 expose les APIs via window.__TAURI__ quand withGlobalTauri: true
+  const invoke = window.__TAURI__.core.invoke;
+
+  let currentToken = '';
+  let currentPort  = 7842;
+
+  // ── Refresh de l'état toutes les 3 s ─────────────────────────────────────
+  async function refreshStatus() {
+    try {
+      const st = await invoke('get_status');
+      setDot('dotWatcher', st.watcher_active ? 'ok' : 'warn');
+      document.getElementById('statusWatcher').textContent =
+        st.watcher_active ? 'Active' : 'Inactif';
+
+      setDot('dotPath', st.sav_path_exists ? 'ok' : (st.sav_path_exists === false ? 'warn' : 'off'));
+      const settings = await invoke('get_settings');
+      document.getElementById('statusPath').textContent =
+        settings.sav_path ?? '(non configuré)';
+      document.getElementById('inpPath').value = settings.sav_path ?? '';
+      document.getElementById('inpOrigin').value = settings.allowed_origin ?? '*';
+      document.getElementById('chkAutostart').checked = st.autostart;
+      currentPort = st.port;
+
+      document.getElementById('statusClients').textContent = st.client_count;
+
+      setDot('dotEvent', st.last_event ? 'ok' : 'off');
+      document.getElementById('statusLastEvent').textContent =
+        st.last_event ? timeAgo(new Date(st.last_event)) : 'Jamais';
+
+      updateSseUrl();
+    } catch (e) {
+      console.error('get_status error:', e);
+    }
+  }
+
+  async function refreshToken() {
+    try {
+      const s = await invoke('get_settings');
+      currentToken = s.token;
+      document.getElementById('tokenDisplay').textContent = currentToken;
+      updateSseUrl();
+    } catch(e) {}
+  }
+
+  function updateSseUrl() {
+    document.getElementById('sseUrl').textContent =
+      `http://localhost:${currentPort}/sse?token=${currentToken}`;
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function setDot(id, cls) {
+    const el = document.getElementById(id);
+    el.className = 'dot ' + cls;
+  }
+
+  function timeAgo(date) {
+    const secs = Math.floor((Date.now() - date) / 1000);
+    if (secs < 60) return `il y a ${secs}s`;
+    if (secs < 3600) return `il y a ${Math.floor(secs/60)}min`;
+    return `il y a ${Math.floor(secs/3600)}h`;
+  }
+
+  function flash(msg = 'Copié !') {
+    const el = document.getElementById('flash');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 1800);
+  }
+
+  // ── Événements ────────────────────────────────────────────────────────────
+  document.getElementById('chkAutostart').addEventListener('change', async e => {
+    try {
+      await invoke('set_autostart', { enabled: e.target.checked });
+    } catch(err) {
+      e.target.checked = !e.target.checked;
+      flash('Erreur : ' + err);
+    }
+  });
+
+  document.getElementById('btnBrowse').addEventListener('click', async () => {
+    try {
+      const dir = await invoke('pick_directory');
+      if (dir) {
+        await invoke('set_sav_path', { path: dir });
+        flash('Chemin enregistré');
+        refreshStatus();
+      }
+    } catch(e) { flash('Erreur : ' + e); }
+  });
+
+  document.getElementById('btnSaveOrigin').addEventListener('click', async () => {
+    const origin = document.getElementById('inpOrigin').value.trim() || '*';
+    try {
+      await invoke('set_allowed_origin', { origin });
+      flash('Origine CORS mise à jour (redémarrage requis)');
+    } catch(e) { flash('Erreur : ' + e); }
+  });
+
+  document.getElementById('btnCopy').addEventListener('click', () => {
+    navigator.clipboard.writeText(currentToken).then(() => flash('Token copié !'));
+  });
+
+  document.getElementById('btnRegen').addEventListener('click', async () => {
+    if (!confirm('Générer un nouveau jeton ? Les clients actuellement connectés seront déconnectés.')) return;
+    try {
+      currentToken = await invoke('regenerate_token');
+      document.getElementById('tokenDisplay').textContent = currentToken;
+      updateSseUrl();
+      flash('Nouveau jeton généré');
+    } catch(e) { flash('Erreur : ' + e); }
+  });
+
+  document.getElementById('btnRefresh').addEventListener('click', async () => {
+    try {
+      await invoke('trigger_refresh');
+      flash('Fichier SAV relu et diffusé');
+    } catch(e) { flash('Erreur : ' + e); }
+  });
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  refreshToken();
+  refreshStatus();
+  setInterval(refreshStatus, 3000);
+</script>
+</body>
+</html>

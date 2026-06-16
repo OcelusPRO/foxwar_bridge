@@ -1,0 +1,6 @@
+node_modules/
+src-tauri/target/
+src-tauri/gen/
+# Artefacts compilés (copiés dans app/src/main/resources/bridge/ via :bridge:deploy)
+*.msi
+*.exe

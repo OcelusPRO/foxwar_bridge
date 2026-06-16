@@ -1,0 +1,64 @@
+[package]
+name = "foxwar-bridge"
+version = "0.1.0"
+description = "Foxwar Bridge — surveille le fichier MapData.sav de Foxhole et expose un flux SSE vers le site web"
+authors = []
+edition = "2021"
+rust-version = "1.80"
+
+[lib]
+name = "foxwar_bridge_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "foxwar-bridge"
+path = "src/main.rs"
+
+# ─── Build deps ──────────────────────────────────────────────────────────────
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+# ─── Runtime deps ────────────────────────────────────────────────────────────
+[dependencies]
+tauri               = { version = "2", features = ["tray-icon"] }
+tauri-plugin-single-instance = "2"
+tauri-plugin-deep-link       = "2"
+tauri-plugin-autostart       = "2"
+tauri-plugin-dialog          = "2"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP / SSE server
+axum        = { version = "0.7" }
+tower-http  = { version = "0.5", features = ["cors"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+
+# File watcher (avec debounce intégré)
+notify                = "6"
+notify-debouncer-mini = "0.4"
+
+# Sérialisation
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Utilitaires
+uuid    = { version = "1", features = ["v4"] }
+base64  = "0.22"
+chrono  = { version = "0.4", features = ["serde"] }
+regex   = "1"
+dirs    = "5"
+url     = "2"
+log     = "0.4"
+env_logger = "0.11"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+codegen-units = 1
+lto           = true
+opt-level     = "s"
+panic         = "abort"
+strip         = true

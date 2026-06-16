@@ -1,0 +1,130 @@
+name: Build & Release
+
+# Déclenché à chaque push sur main (hors .md et .github eux-mêmes)
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+
+jobs:
+  release:
+    name: Build Tauri & publish release
+    runs-on: windows-latest
+    permissions:
+      contents: write   # pour créer le tag + la release
+
+    steps:
+      # ── 1. Checkout complet (tous les tags pour la détection de version) ──────
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── 2. Calcul de la prochaine version ─────────────────────────────────────
+      #   Règle :
+      #   • La version dans Cargo.toml définit le major.minor de référence.
+      #   • Si aucun tag v<major>.<minor>.* n'existe → patch = 0
+      #   • Sinon → patch = dernier_patch_tagué + 1
+      #   • Si Cargo.toml monte en major ou minor → nouveau patch 0
+      - name: Compute next version
+        id: ver
+        shell: pwsh
+        run: |
+          $raw     = Get-Content src-tauri/Cargo.toml -Raw
+          $cargo   = ([regex]'(?m)^version\s*=\s*"([^"]+)"').Match($raw).Groups[1].Value
+          $cMaj, $cMin, $_ = $cargo -split '\.'
+
+          # Recherche du dernier tag pour ce major.minor
+          $tags = git tag --list "v$cMaj.$cMin.*" 2>$null |
+                  Where-Object { $_ -match '^v\d+\.\d+\.\d+$' } |
+                  Sort-Object { [int]($_ -replace "^v$cMaj\.$cMin\.", '') } -Descending
+
+          if ($tags) {
+              $topPatch = [int](($tags[0]) -replace "^v$cMaj\.$cMin\.", '')
+              $next = "$cMaj.$cMin.$($topPatch + 1)"
+          } else {
+              $next = "$cMaj.$cMin.0"
+          }
+
+          "version=$next" | Out-File -Append $env:GITHUB_OUTPUT
+          "tag=v$next"    | Out-File -Append $env:GITHUB_OUTPUT
+          Write-Host "Next release: $next"
+
+      # ── 3. Applique la version calculée dans les fichiers de config ───────────
+      - name: Patch version in Cargo.toml & tauri.conf.json
+        shell: pwsh
+        run: |
+          $v = '${{ steps.ver.outputs.version }}'
+
+          # Cargo.toml — première occurrence de version = "..."
+          $ct = Get-Content src-tauri/Cargo.toml -Raw
+          $ct = [regex]::Replace($ct, '(?m)^version\s*=\s*"[^"]+"', "version = `"$v`"", 1)
+          Set-Content src-tauri/Cargo.toml $ct -NoNewline
+
+          # tauri.conf.json
+          $tj = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
+          $tj.version = $v
+          $tj | ConvertTo-Json -Depth 10 | Set-Content src-tauri/tauri.conf.json -NoNewline
+
+      # ── 4. Toolchains ─────────────────────────────────────────────────────────
+      - name: Install Rust (stable MSVC)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust / Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # ── 5. Dépendances npm (Tauri CLI) ────────────────────────────────────────
+      - name: Install npm dependencies
+        run: npm ci
+
+      # ── 6. Build Tauri (MSI + NSIS) ───────────────────────────────────────────
+      - name: Build Tauri app
+        run: npx tauri build
+        env:
+          # Optionnel : code signing (configurer ces secrets pour signer l'installeur)
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      # ── 7. Collecte des artefacts ─────────────────────────────────────────────
+      - name: Collect artifacts
+        id: artifacts
+        shell: pwsh
+        run: |
+          $msi  = Get-ChildItem src-tauri/target/release/bundle/msi/*.msi  -ErrorAction SilentlyContinue | Select-Object -First 1
+          $nsis = Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          $v    = '${{ steps.ver.outputs.version }}'
+
+          # Renomme avec la version explicite pour une URL de release propre
+          if ($msi) {
+              $destMsi = "foxwar-bridge_${v}_x64.msi"
+              Copy-Item $msi.FullName $destMsi
+              "msi=$destMsi" | Out-File -Append $env:GITHUB_OUTPUT
+          }
+          if ($nsis) {
+              $destExe = "foxwar-bridge_${v}_x64-setup.exe"
+              Copy-Item $nsis.FullName $destExe
+              "exe=$destExe" | Out-File -Append $env:GITHUB_OUTPUT
+          }
+
+      # ── 8. Création du tag + Release GitHub ───────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: 'Foxwar Bridge ${{ steps.ver.outputs.version }}'
+          generate_release_notes: true
+          files: |
+            foxwar-bridge_${{ steps.ver.outputs.version }}_x64.msi
+            foxwar-bridge_${{ steps.ver.outputs.version }}_x64-setup.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
