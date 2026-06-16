@@ -10,7 +10,7 @@ use std::sync::atomic::AtomicUsize;
 
 use chrono::{DateTime, Utc};
 use settings::Settings;
-use tauri::Manager;
+use tauri::{Listener, Manager};
 use tokio::sync::broadcast;
 
 // ─── Handle du serveur SSE ────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEventKind};
 use regex::Regex;
+use tauri::Manager;
 use tokio::sync::broadcast;
 
 pub type WatcherHandle = Option<notify_debouncer_mini::Debouncer<notify::RecommendedWatcher>>;

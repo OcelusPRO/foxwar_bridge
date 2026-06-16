@@ -4,7 +4,7 @@ use std::sync::atomic::Ordering;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use tauri::{command, AppHandle, State};
-use tauri_plugin_autostart::ManagerExt;
+use tauri_plugin_autostart::{AutoLaunchManager, ManagerExt};
 
 use crate::{settings::generate_token, AppState};
 
@@ -36,9 +36,9 @@ pub async fn get_settings(state: State<'_, AppState>) -> Result<crate::settings:
 }
 
 #[command]
-pub async fn get_status(state: State<'_, AppState>, app: AppHandle) -> Result<BridgeStatus, String> {
+pub async fn get_status<R: tauri::Runtime>(state: State<'_, AppState>, app: AppHandle<R>) -> Result<BridgeStatus, String> {
     let settings = state.settings.read().unwrap();
-    let autostart = app.autostart_manager().is_enabled().unwrap_or(false);
+    let autostart = app.autolaunch().is_enabled().unwrap_or(false);
     Ok(BridgeStatus {
         watcher_active: state.watcher.lock().unwrap().is_some(),
         sav_path_exists: settings.sav_path.as_deref().map(|p| Path::new(p).exists()).unwrap_or(false),
@@ -70,8 +70,8 @@ pub async fn get_sse_status(state: State<'_, AppState>) -> Result<SseStatus, Str
 }
 
 #[command]
-pub async fn set_autostart(enabled: bool, app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    let manager = app.autostart_manager();
+pub async fn set_autostart<R: tauri::Runtime>(enabled: bool, app: AppHandle<R>, state: State<'_, AppState>) -> Result<(), String> {
+    let manager: State<'_, AutoLaunchManager> = app.autolaunch();
     if enabled { manager.enable().map_err(|e| e.to_string())?; }
     else        { manager.disable().map_err(|e| e.to_string())?; }
     state.settings.write().unwrap().autostart = enabled;
