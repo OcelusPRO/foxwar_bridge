@@ -53,12 +53,22 @@ fn is_newer(remote: &str, current: &str) -> bool {
 fn client() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
         .user_agent(USER_AGENT)
+        .connect_timeout(std::time::Duration::from_secs(15))
+        .timeout(std::time::Duration::from_secs(120))
         .build()
         .map_err(|e| e.to_string())
 }
 
 /// Interroge GitHub et renvoie une `UpdateInfo` si une version plus récente existe.
 pub async fn check() -> Result<Option<UpdateInfo>, String> {
+    // En build de développement, la version locale (0.1.0) est toujours
+    // antérieure à la dernière release publiée : on n'afficherait que de fausses
+    // mises à jour. Seuls les builds release (produits par la CI) vérifient.
+    if cfg!(debug_assertions) {
+        log::info!("Update check skipped (debug build)");
+        return Ok(None);
+    }
+
     let url = format!("https://api.github.com/repos/{REPO}/releases/latest");
     let rel: GhRelease = client()?
         .get(url)
@@ -72,7 +82,9 @@ pub async fn check() -> Result<Option<UpdateInfo>, String> {
         .await
         .map_err(|e| e.to_string())?;
 
-    if !is_newer(&rel.tag_name, env!("CARGO_PKG_VERSION")) {
+    let current = env!("CARGO_PKG_VERSION");
+    log::info!("Update check: current {current}, latest {}", rel.tag_name);
+    if !is_newer(&rel.tag_name, current) {
         return Ok(None);
     }
 
@@ -95,20 +107,22 @@ pub async fn check() -> Result<Option<UpdateInfo>, String> {
 /// Télécharge l'installeur dans le dossier temp et le lance.
 /// L'appelant est responsable de quitter l'application ensuite.
 pub async fn download_and_run(url: &str) -> Result<(), String> {
+    log::info!("Downloading update from {url}");
     let bytes = client()?
         .get(url)
         .send()
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(|e| format!("Téléchargement impossible : {e}"))?
         .error_for_status()
-        .map_err(|e| e.to_string())?
+        .map_err(|e| format!("Réponse HTTP en erreur : {e}"))?
         .bytes()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Lecture du flux impossible : {e}"))?;
 
     let filename = url.rsplit('/').next().unwrap_or("foxwar-bridge-setup.exe");
     let dest = std::env::temp_dir().join(filename);
-    std::fs::write(&dest, &bytes).map_err(|e| e.to_string())?;
+    std::fs::write(&dest, &bytes)
+        .map_err(|e| format!("Écriture du fichier impossible : {e}"))?;
 
     log::info!("Update downloaded to {} ({} bytes)", dest.display(), bytes.len());
 
@@ -116,5 +130,6 @@ pub async fn download_and_run(url: &str) -> Result<(), String> {
         .spawn()
         .map_err(|e| format!("Impossible de lancer l'installeur : {e}"))?;
 
+    log::info!("Installer launched, application will exit");
     Ok(())
 }

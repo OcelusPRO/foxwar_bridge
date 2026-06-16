@@ -228,6 +228,12 @@
       margin-bottom: 10px;
       padding-right: 4px;
     }
+    .update-error {
+      font-size: 11px;
+      color: #ef4444;
+      margin-bottom: 10px;
+      white-space: pre-wrap;
+    }
 
     /* ── Separator ── */
     .sep {
@@ -348,6 +354,7 @@
   <div class="card-title">Mise à jour disponible</div>
   <div class="update-text">Nouvelle version <b id="updateVersion">—</b> disponible.</div>
   <div class="update-notes" id="updateNotes"></div>
+  <div class="update-error" id="updateError" style="display:none"></div>
   <button class="btn btn-amber btn-full" id="btnInstallUpdate">Télécharger et installer</button>
 </div>
 
@@ -451,15 +458,18 @@
   document.getElementById('btnInstallUpdate').addEventListener('click', async () => {
     if (!pendingUpdateUrl) return;
     const btn = document.getElementById('btnInstallUpdate');
+    const err = document.getElementById('updateError');
+    err.style.display = 'none';
     btn.disabled = true;
     btn.textContent = 'Téléchargement…';
     try {
       await invoke('install_update', { url: pendingUpdateUrl });
-      btn.textContent = 'Lancement de l’installeur…';
+      btn.textContent = 'Installation en cours…';
     } catch (e) {
-      flash('Erreur de mise à jour : ' + e, 'err');
+      err.textContent = 'Échec : ' + e;
+      err.style.display = '';
       btn.disabled = false;
-      btn.textContent = 'Télécharger et installer';
+      btn.textContent = 'Réessayer';
     }
   });
 
